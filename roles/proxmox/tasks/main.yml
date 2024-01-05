@@ -1,0 +1,57 @@
+---
+- name: Configure Debian bookworm based Proxmox
+  block:
+  - name: Disable pve-enterprise bookworm repository
+    apt_repository:
+      repo: deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise
+      state: absent
+
+  - name: Disable cep-quincy bookworm repository
+    apt_repository:
+      repo: deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm enterprise
+      state: absent
+
+  - name: Enable debian bookworm main contrib repository
+    apt_repository:
+      repo: deb http://ftp.pl.debian.org/debian bookworm main contrib
+      state: present
+      update_cache: yes
+
+  - name: Enable debian bookworm-updates main contrib repository
+    apt_repository:
+      repo: deb http://ftp.pl.debian.org/debian bookworm-updates main contrib
+      state: present
+      update_cache: yes
+
+  - name: Enable debian bookworm-security main contrib repository
+    apt_repository:
+      repo: deb http://security.debian.org bookworm-security main contrib
+      state: present
+      update_cache: yes
+
+  - name: Enable debian pve bookworm pve-no-subscription repository   
+    apt_repository:
+      repo: deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription
+      state: present
+      update_cache: yes
+  when: 
+    - ansible_facts['distribution'] == 'Debian'
+    - ansible_facts['distribution_release'] == 'bookworm'
+
+- name: Install a list of packages
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - vim
+
+
+- name: Enable IOMMU in GRUB
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="((?:(?!intel_iommu=on).)*?)"$'
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="\1 intel_iommu=on"'
+    backup: true
+    backrefs: true
+  notify: update-grub
+
